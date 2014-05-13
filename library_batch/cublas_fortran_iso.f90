@@ -1,0 +1,84 @@
+module cublas_f
+  use ISO_C_BINDING
+
+    enum, BIND(C)
+      enumerator :: CUBLAS_OP_N, CUBLAS_OP_T, CUBLAS_OP_C
+    end enum
+
+  INTERFACE
+    integer(C_INT) function cudaMalloc(ptr, bytes) BIND(C, NAME='cudaMalloc')
+        use ISO_C_BINDING
+        type(C_PTR) :: ptr
+        integer(C_SIZE_T), value :: bytes
+    end function
+
+    integer(C_INT) function cublasCreate(handle_ptr) BIND(C, NAME='f_cublasCreate')
+        use ISO_C_BINDING
+        type(C_PTR) :: handle_ptr
+    end function
+
+    subroutine  cublasDestroy(handle_ptr) BIND(C, NAME='f_cublasDestroy')
+        use ISO_C_BINDING
+        type(C_PTR), value :: handle_ptr
+    end subroutine
+
+    subroutine cudaFree(ptr) BIND(C, NAME='cudaFree')
+        use ISO_C_BINDING
+        type(C_PTR), value :: ptr
+    end subroutine
+
+    integer(C_INT) function cublasSetMatrix(rows, cols, elemSize, a_ptr, &
+                                           lda, b_ptr, ldb) &
+                                           BIND(C, NAME='cublasSetMatrix')
+        use ISO_C_BINDING
+        integer(C_INT), value :: rows
+        integer(C_INT), value :: cols
+        integer(C_INT), value :: elemSize
+        type(C_PTR),    value :: a_ptr
+        integer(C_INT), value :: lda
+        type(C_PTR),    value :: b_ptr
+        integer(C_INT), value :: ldb
+    end function
+
+    integer(C_INT) function cublasGetMatrix(rows, cols, elemSize, a_ptr, &
+                                            lda, b_ptr, ldb ) &
+                                            BIND(C, NAME='cublasGetMatrix')
+        use ISO_C_BINDING
+        integer(C_INT), value :: rows
+        integer(C_INT), value :: cols
+        integer(C_INT), value :: elemSize
+        type(C_PTR),    value :: a_ptr
+        integer(C_INT), value :: lda
+        type(C_PTR),    value :: b_ptr
+        integer(C_INT), value :: ldb
+
+    end function
+
+    integer(C_INT) function cublasDgemm(handle, transa, transb, m, n, k, alpha, &
+                                        A, lda, B, ldb, beta, C, ldc) &
+                                        BIND(C, NAME='f_cublasDgemm')
+        use ISO_C_BINDING
+        type(C_PTR), value    :: handle
+        integer(C_INT), value :: transa
+        integer(C_INT), value :: transb
+        integer(C_INT), value :: m
+        integer(C_INT), value :: n
+        integer(C_INT), value :: k
+        real(C_DOUBLE)        :: alpha
+        type(C_PTR), value    :: A
+        integer(C_INT), value :: lda
+        type(C_PTR), value    :: B
+        integer(C_INT), value :: ldb
+        real(C_DOUBLE)        :: beta
+        type(C_PTR), value    :: C
+        integer(C_INT), value :: ldc
+    end function
+
+    integer(C_INT) function cudaStreamCreate(stream_ptr) BIND(C, NAME='f_cudaStreamCreate')
+        use ISO_C_BINDING
+        type(C_PTR) :: stream_ptr
+    end function
+
+  END INTERFACE
+
+end module cublas_f

@@ -1,0 +1,3 @@
+############ cc -lcublas -DCUBLAS_GFORTRAN /opt/nvidia/cudatoolkit/5.5.20-1.0402.7700.8.1/src/fortran.c -c
+nvcc -c cublas_fortran.cu
+ftn -lcublas cublas_fortran_iso.f90 cublas.f90 cublas_fortran.o 
