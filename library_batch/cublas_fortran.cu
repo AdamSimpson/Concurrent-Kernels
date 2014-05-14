@@ -19,15 +19,24 @@ extern "C" int f_cublasDgemm(cublasHandle_t *handle,
     return cublasDgemm(*handle,transa,transb,m,n,k,alpha,A,lda,B,ldb,beta,C,ldc);
 }
 
-extern "C" void f_cublasDestroy(cublasHandle_t *handle_ptr)
+extern "C" void f_cublasDestroy(cublasHandle_t *handle)
 {
-    cublasDestroy(*handle_ptr);
-    free(handle_ptr);
+    cublasDestroy(*handle);
+    free(handle);
 }
 
 extern "C" int f_cudaStreamCreate(cudaStream_t **stream)
 {
     *stream = (cudaStream_t *) malloc(sizeof(cudaStream_t));
-    cudaStreamCreate(*stream);
+    return cudaStreamCreate(*stream);
 }
 
+extern "C" int f_cublasSetStream(cublasHandle_t *handle, cudaStream_t *streamid)
+{
+    return cublasSetStream(*handle, *streamid);
+}
+
+extern "C" void f_cudaStreamDestroy(cudaStream_t *stream)
+{
+    cudaStreamDestroy(*stream);
+}

@@ -5,9 +5,9 @@ program main
 
     integer :: dim, stat, i, j, k, batch_count
     integer(8) :: bytes
-    real(8),dimension(:,:),allocatable :: A, B, C
+    real(8),dimension(:,:,:),allocatable :: A, B, C
     real(8) :: alpha, beta, index, sum
-    type(C_PTR), dimensions(:), allocatable :: d_A, d_B, d_C, streams
+    type(C_PTR), dimension(:), allocatable :: d_A, d_B, d_C, streams
     type(C_PTR) :: handle
 
     integer :: sizeof_double
@@ -67,38 +67,56 @@ program main
     ! Create a stream for every DGEMM operation
     allocate(streams(batch_count))
     do i=1,batch_count
-        stat = cublasStreamCreate(streams(i))
+        stat = cudaStreamCreate(streams(i))
     enddo
 
-    ! DGEMM: C = alpha*A*B + beta*C
+    ! Set matrix coefficients
     alpha = 1.0
     beta = 1.0
-    stat = cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, &
-                       dim, dim, dim, &
-                       alpha,         &
-                       d_A, dim,      &
-                       d_B, dim,      &
-                       beta,          &
-                       d_C, dim)
+
+    ! Launch each DGEMM operation in own CUDA stream
+    do i=1,batch_count
+        ! Set CUDA stream
+        stat = cublasSetStream(handle, streams(i))
+
+        ! DGEMM: C = alpha*A*B + beta*C
+        stat = cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, &
+                           dim, dim, dim, &
+                           alpha,         &
+                           d_A(i), dim,   &
+                           d_B(i), dim,   &
+                           beta,          &
+                           d_C(i), dim)
+    enddo
+
+    call cudaDeviceSynchronize()
 
     ! Retrieve result matrix from device
-    stat = cublasGetMatrix(dim, dim, sizeof_double, d_C, dim, C_LOC(C(1,1)), dim)
+    do i=1,batch_count
+        stat = cublasGetMatrix(dim, dim, sizeof_double, d_C(i), dim, C_LOC(C(1,1,i)), dim)
+    enddo
 
     ! Simple sanity test, sum up all elements
     sum = 0.0
-    do j=1,dim
-        do i=1,dim
-            sum = sum + C(i,j)
+    do k=1,dim
+        do j=1,dim
+            do i=1,dim
+                sum = sum + C(i,j,k)
+            enddo
         enddo
     enddo
     print *, "Sum is:", sum, "should be: ", dim
 
+    do i=1,batch_count
+        stat = cudaStreamDestroy(streams(i))
+        call cudaFree(d_A(i))
+        call cudaFree(d_B(i))
+        call cudaFree(d_C(i))
+    enddo
+
     deallocate(A)
     deallocate(B)
     deallocate(C)
-    call cudaFree(d_A)
-    call cudaFree(d_B)
-    call cudaFree(d_C)
     call cublasDestroy(handle)
 
 end program

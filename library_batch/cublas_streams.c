@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
     }
 
     // Enesure all work is finished before reading results
-    cudaThreadSynchronize();
+    cudaDeviceSynchronize();
 
     // Retrieve result matrix from device
     for(i=0; i<batch_count; i++) {
@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
         cudaFree(d_A[i]);
         cudaFree(d_B[i]);
         cudaFree(d_C[i]);
-        cudaStreamDestroy(&streams[i]);
+        cudaStreamDestroy(streams[i]);
     }
     free(A);
     free(B);

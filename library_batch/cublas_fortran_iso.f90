@@ -79,6 +79,20 @@ module cublas_f
         type(C_PTR) :: stream_ptr
     end function
 
+    integer(C_INT) function cublasSetStream(handle, stream) BIND(C, NAME='f_cublasSetStream')
+        use ISO_C_BINDING
+        type(C_PTR), value :: handle
+        type(C_PTR), value :: stream
+    end function
+
+    integer(C_INT) function cudaStreamDestroy(stream) BIND(C, NAME='f_cudaStreamDestroy')
+        use ISO_C_BINDING
+        type(C_PTR), value :: stream
+    end function
+
+    subroutine cudaDeviceSynchronize() BIND(C, NAME='cudaDeviceSynchronize')
+    end subroutine
+
   END INTERFACE
 
 end module cublas_f
