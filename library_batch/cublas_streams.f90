@@ -98,14 +98,14 @@ program main
 
     ! Simple sanity test, sum up all elements
     sum = 0.0
-    do k=1,dim
+    do k=1,batch_count
         do j=1,dim
             do i=1,dim
                 sum = sum + C(i,j,k)
             enddo
         enddo
     enddo
-    print *, "Sum is:", sum, "should be: ", dim
+    print *, "Sum is:", sum, "should be: ", dim*(batch_count)*(batch_count+1)/2
 
     do i=1,batch_count
         stat = cudaStreamDestroy(streams(i))

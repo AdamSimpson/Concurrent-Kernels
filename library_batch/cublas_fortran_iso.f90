@@ -2,7 +2,12 @@ module cublas_f
   use ISO_C_BINDING
 
     enum, BIND(C)
-      enumerator :: CUBLAS_OP_N, CUBLAS_OP_T, CUBLAS_OP_C
+        enumerator :: CUBLAS_OP_N, CUBLAS_OP_T, CUBLAS_OP_C
+    end enum
+   
+    enum, BIND(C)
+        enumerator :: cudaMemcpyHostToHost, cudaMemcpyHostToDevice, cudaMemcpyDeviceToHost, &
+                      cudaMemcpyDeviceToDevice, cudaMemcpyDefault
     end enum
 
   INTERFACE
@@ -10,6 +15,14 @@ module cublas_f
         use ISO_C_BINDING
         type(C_PTR) :: ptr
         integer(C_SIZE_T), value :: bytes
+    end function
+
+    integer(C_INT) function cudaMemcpy(dst, src, count, kind) BIND(C, NAME='cudaMemcpy')
+        use ISO_C_BINDING
+        type(C_PTR), value :: dst
+        type(C_PTR), value :: src
+        integer(C_SIZE_T), value :: count
+        integer(C_INT), value :: kind
     end function
 
     integer(C_INT) function cublasCreate(handle_ptr) BIND(C, NAME='f_cublasCreate')
@@ -72,6 +85,27 @@ module cublas_f
         real(C_DOUBLE)        :: beta
         type(C_PTR), value    :: C
         integer(C_INT), value :: ldc
+    end function
+
+    integer(C_INT) function cublasDgemmBatched(handle, transa, transb, m, n, k, alpha, &
+                                        A, lda, B, ldb, beta, C, ldc, batch_count) &
+                                        BIND(C, NAME='f_cublasDgemmBatched')
+        use ISO_C_BINDING
+        type(C_PTR), value    :: handle
+        integer(C_INT), value :: transa
+        integer(C_INT), value :: transb
+        integer(C_INT), value :: m
+        integer(C_INT), value :: n
+        integer(C_INT), value :: k
+        real(C_DOUBLE)        :: alpha
+        type(C_PTR), value    :: A
+        integer(C_INT), value :: lda
+        type(C_PTR), value    :: B
+        integer(C_INT), value :: ldb
+        real(C_DOUBLE)        :: beta
+        type(C_PTR), value    :: C
+        integer(C_INT), value :: ldc
+        integer(C_INT), value :: batch_count
     end function
 
     integer(C_INT) function cudaStreamCreate(stream_ptr) BIND(C, NAME='f_cudaStreamCreate')

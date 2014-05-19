@@ -19,6 +19,19 @@ extern "C" int f_cublasDgemm(cublasHandle_t *handle,
     return cublasDgemm(*handle,transa,transb,m,n,k,alpha,A,lda,B,ldb,beta,C,ldc);
 }
 
+extern "C" int f_cublasDgemmBatched(cublasHandle_t *handle,
+               cublasOperation_t transa, cublasOperation_t transb,
+              int m, int n, int k,
+              const double *alpha,
+              const double **A, int lda,
+              const double **B, int ldb,
+              const double *beta,
+              double **C, int ldc,
+              int batch_count)
+{
+    return cublasDgemmBatched(*handle,transa,transb,m,n,k,alpha,A,lda,B,ldb,beta,C,ldc,batch_count);
+}
+
 extern "C" void f_cublasDestroy(cublasHandle_t *handle)
 {
     cublasDestroy(*handle);
