@@ -39,10 +39,10 @@ int main(int argc, char *argv[])
 
         // Print seconds ellapsed
         gettimeofday(&stop, NULL);
-        double milliseconds;
-        milliseconds = (stop.tv_sec - start.tv_sec) * 1000.0;
-        milliseconds += (stop.tv_usec - start.tv_usec) / 1000.0;
-        printf("Total time for %d kernels: %f s\n", num_kernels, 1000*milliseconds);
+        double seconds;
+        seconds = (stop.tv_sec - start.tv_sec);
+        seconds += (stop.tv_usec - start.tv_usec) / 1000000.0;
+        printf("Total time for %d kernels: %f s\n", num_kernels, seconds);
     }
 
     return 0;
