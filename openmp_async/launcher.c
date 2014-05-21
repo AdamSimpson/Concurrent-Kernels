@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 
         // Stop timer
         stop = omp_get_wtime();
-        printf("elapsed time %f seconds\n", stop-start);
+        printf("Total time for %d kernels: %f s\n", num_kernels, stop-start);
     }
 
     return 0;
