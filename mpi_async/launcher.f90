@@ -1,15 +1,13 @@
 program main
     use sleep
-
     implicit none
-
     include 'mpif.h'
 
-    integer(8) :: cycles
     integer    ::  max_kernels, num_kernels, i, ierr, rank, size
+    integer(8) :: cycles
     real(8)    :: start, stop, seconds
 
-    call MPI_Init()
+    call MPI_Init(ierr)
 
     ! Get number of cycles to sleep for 1 second
     seconds = 1.0
@@ -18,33 +16,33 @@ program main
     call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
     call MPI_Comm_size(MPI_COMM_WORLD, size, ierr)
 
+    ! Number of kernels to launch
+    max_kernels = size
+
+    ! Loop through number of kernels to launch, from 1 to max_kernels
     do num_kernels = 1, max_kernels
 
         ! Start timer
         call MPI_Barrier(MPI_COMM_WORLD, ierr)
         start = MPI_Wtime()
 
-        ! Create streams
-        call create_streams(num_kernels)
-
         ! Launch num_kernel kernels asynchrnously
         if (rank < num_kernels) then
-            call sleep_kernel(cycles, rank+1)
+            call sleep_kernel(cycles)
+            call wait_for_gpu()
         endif
-
-        ! Wait for kernels to complete and clean up streams
-        call destroy_streams(num_kernels)
 
         ! Stop timer
         call MPI_Barrier(MPI_COMM_WORLD, ierr)
         stop = MPI_Wtime()
 
+        ! Print seconds ellapsed
         if (rank == 0) then
             print *, 'Total time for ', num_kernels,' kernels: ', stop-start, 'seconds'
         endif
 
     enddo
 
-    call MPI_Finalize()
+    call MPI_Finalize(ierr)
 
 end program main

@@ -19,3 +19,4 @@ endif
 clean:
 	rm -rf bin
 	rm -f *.o
+	rm -f *.mod

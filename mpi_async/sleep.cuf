@@ -3,8 +3,6 @@ module sleep
     use cudafor
     implicit none
 
-    integer, dimension(:), allocatable :: streams
-
     contains
 
     !CUDA kernel to pause for at least num_cycle cycles
@@ -31,40 +29,22 @@ module sleep
         num_cycles = seconds * Hz
     end function get_cycles
     
-    !Create streams
-    subroutine create_streams(num_streams)
-        integer :: num_streams, istat, i
-        
-        allocate(streams(num_streams))
-
-        do i=1,num_streams
-            istat = cudaStreamCreate(streams(i))       
-        enddo
-    end subroutine create_streams
-
     !Launches a kernel that sleeps for num_cycles
-    subroutine sleep_kernel(num_cycles, stream_id)
+    subroutine sleep_kernel(num_cycles)
         integer(8) :: num_cycles
-        integer    ::  stream_id
         type(dim3) :: blockSize, gridSize
 
         blockSize = dim3(1,1,1)
         gridSize = dim3(1,1,1)
 
-        call sleep<<<gridSize, blockSize, 0, streams(stream_id)>>>(num_cycles)
+        call sleep<<<gridSize, blockSize>>>(num_cycles)
     end subroutine sleep_kernel
 
-    !Wait for streams to complete and then destroy
-    subroutine destroy_streams(num_streams)
-        integer :: num_streams, i, istat
+    !Wait for kernels to complete
+    subroutine wait_for_gpu()
+        integer :: istat
 
-        ! Wait for kernel to finish
-        do i=1,num_streams
-            istat = cudaStreamSynchronize(streams(i))
-        enddo
-
-        ! Clean up streams
-        deallocate(streams)        
-    end subroutine destroy_streams
+        istat = cudaDeviceSynchronize()
+    end subroutine wait_for_gpu
 
 end module sleep
