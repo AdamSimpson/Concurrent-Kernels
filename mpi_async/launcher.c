@@ -4,8 +4,10 @@
 #include "mpi.h"
 
 int64_t get_cycles(float seconds);
-void sleep_kernel(int64_t num_cycles);
-void wait_device();
+void create_streams(int num_streams);
+void destroy_streams(int num_streams);
+void sleep_kernel(int64_t num_cycles, int stream_id);
+void wait_for_stream(int stream_id);
 
 int main(int argc, char *argv[])
 {
@@ -25,29 +27,39 @@ int main(int argc, char *argv[])
     // Number of kernels to launch
     int max_kernels = size;
 
+    // Setup default stream in sleep.cu wrapper
+    create_streams(0);
+
     // Loop through number of kernels to launch, from 1 to max_kernels
     for(num_kernels=1; num_kernels<=max_kernels; num_kernels++)
     {
         // Start timer
         MPI_Barrier(MPI_COMM_WORLD);
-        start = MPI_Wtime();
+        if(rank == 0)
+            start = MPI_Wtime();
 
-        // Launch kernel asynchrnously
-        if(rank < num_kernels) {
-            sleep_kernel(cycles);
-            // Wait for kernels to complete
-            wait_for_gpu();
-        }
+        // Launch kernel into default stream
+        if(rank < num_kernels)
+            sleep_kernel(cycles, 0);
 
-        // Stop timer
+        // Wait for all ranks to submit kernel
         MPI_Barrier(MPI_COMM_WORLD);
-        stop = MPI_Wtime();
+
+        // Wait for default stream
+        if(rank < num_kernels)
+            wait_for_stream(0);
+
+        // Wait for all ranks to complete
+        MPI_Barrier(MPI_COMM_WORLD);
 
         // Print seconds ellapsed
-        if(rank == 0)
+        if(rank == 0) {
+            stop = MPI_Wtime();
             printf("Total time for %d kernels: %f s\n", num_kernels, stop-start);
+        }
     }
 
+    destroy_streams(0);
     MPI_Finalize();
 
     return 0;

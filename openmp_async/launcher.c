@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     cycles = get_cycles(1.0);
 
     // Number of kernels to launch
-    int max_kernels = 33;
+    int max_kernels = 16;
 
     // Loop through number of kernels to launch, from 1 to num_kernels
     for(num_kernels=1; num_kernels<=max_kernels; num_kernels++)
@@ -36,11 +36,14 @@ int main(int argc, char *argv[])
         // Launch num_kernel kernels asynchrnously
         #pragma omp parallel firstprivate(cycles)
         {
-            int stream_id = omp_get_thread_num();
+            int stream_id = omp_get_thread_num()+1;
             sleep_kernel(cycles, stream_id);
         }
 
-        // Wait for kernels to complete and clean up streams
+        // Wait for kernels to complete
+        wait_for_streams(num_kernels);
+
+        // Clean up streams
         destroy_streams(num_kernels);
 
         // Stop timer

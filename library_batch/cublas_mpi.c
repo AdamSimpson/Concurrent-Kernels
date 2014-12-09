@@ -2,16 +2,23 @@
 #include <stdlib.h>
 #include "math.h"
 #include "cublas_v2.h"
+#include "mpi.h"
 
 int main(int argc, char* argv[])
 {
-    int i,j,k,index;
+    MPI_Init(&argc, &argv);
+
+    int i,j,k,index,rank,size;
+    double start, stop;
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     // Linear dimension of matrices
-    int dim = 100;
+    int dim = 10000;
 
     // Number of A,B,C matrix sets
-    int batch_count = 1000;
+    int batch_count = 1;
 
     // Allocate host storage for batch_count A,B,C square matrices
     double **A, **B, **C;
@@ -58,6 +65,9 @@ int main(int argc, char* argv[])
     cublasHandle_t handle;
     cublasCreate(&handle);
 
+    // Start walltimer
+    start = MPI_Wtime();
+
     // Set input matrices on device
     for(i=0; i<batch_count; i++) {
         cublasSetMatrix(dim, dim, sizeof(double), A[i], dim, d_A[i], dim);
@@ -65,20 +75,12 @@ int main(int argc, char* argv[])
         cublasSetMatrix(dim, dim, sizeof(double), C[i], dim, d_C[i], dim);
     }
 
-    // Create a stream for every DGEMM operation
-    cudaStream_t *streams = (cudaStream_t *) malloc(batch_count*sizeof(cudaStream_t));
-    for(i=0; i<batch_count; i++)
-        cudaStreamCreate(&streams[i]);
-
     // Set matrix coefficients
     double alpha = 1.0;
     double beta  = 1.0;
 
     // Launch each DGEMM operation in own CUDA stream
     for(i=0; i<batch_count; i++){
-        // Set CUDA stream
-        cublasSetStream(handle, streams[i]);
-
         // DGEMM: C = alpha*A*B + beta*C
         cublasDgemm(handle,
                     CUBLAS_OP_N, CUBLAS_OP_N,
@@ -95,6 +97,9 @@ int main(int argc, char* argv[])
         cublasGetMatrix(dim, dim, sizeof(double), d_C[i], dim, C[i], dim);
     }
 
+    // Start walltimer
+    stop = MPI_Wtime();
+
     // Simple sanity test, sum up all elements
     double sum = 0;
     for(k=0; k<batch_count; k++) {
@@ -105,7 +110,7 @@ int main(int argc, char* argv[])
             }
         }
     }
-    printf("Element sum is: %f, should be: %d\n", sum, dim*(batch_count-1)*(batch_count)/2);   
+    printf("Rank %d time %f,element sum is: %f, should be: %d\n", rank, stop-start, sum, dim*(batch_count-1)*(batch_count)/2);   
 
     // Clean up resources
     for(i=0; i<batch_count; i++) {
@@ -115,7 +120,6 @@ int main(int argc, char* argv[])
         cudaFree(d_A[i]);
         cudaFree(d_B[i]);
         cudaFree(d_C[i]);
-        cudaStreamDestroy(streams[i]);
     }
     free(A);
     free(B);
@@ -124,6 +128,8 @@ int main(int argc, char* argv[])
     cudaFree(d_B);
     cudaFree(d_C);
     cublasDestroy(handle);
+
+    MPI_Finalize();
 
     return 0;
 }

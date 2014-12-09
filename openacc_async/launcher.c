@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
         {
             #pragma acc parallel async(i) vector_length(1) num_gangs(1)
             {
-                int cycles;
+                uint64_t cycles;
                 #pragma acc loop seq
                 for(cycles=0; cycles<num_cycles; cycles++) {
                     cycles = cycles;
@@ -39,12 +39,12 @@ int main(int argc, char *argv[])
         // Wait for all async streams to complete
         #pragma acc wait
 
-        // Print milliseconds ellapsed
+        // Print seconds ellapsed
         gettimeofday(&stop, NULL);
-        double milliseconds;
-        milliseconds = (stop.tv_sec - start.tv_sec) * 1000.0;
-        milliseconds += (stop.tv_usec - start.tv_usec) / 1000.0;
-        printf("Total time for %d kernels: %f ms\n", num_kernels, milliseconds);
+        double seconds;
+        seconds = (stop.tv_sec - start.tv_sec);
+        seconds += (stop.tv_usec - start.tv_usec) / 1000000.0;
+        printf("Total time for %d kernels: %f s\n", num_kernels, seconds);
     }
 
     return 0;

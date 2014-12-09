@@ -7,7 +7,8 @@ program main
     integer(8) :: bytes
     real(8),dimension(:,:,:),allocatable :: A, B, C
     real(8) :: alpha, beta, index, sum
-    type(C_PTR), dimension(:), allocatable :: d_A, d_B, d_C, streams
+    type(C_PTR) :: d_A, d_B, d_C
+    type(C_PTR), dimension(:), allocatable :: h_d_A, h_d_B, h_d_C, streams
     type(C_PTR) :: handle
 
     integer :: sizeof_double
@@ -24,16 +25,27 @@ program main
     allocate(B(dim,dim,batch_count))
     allocate(C(dim,dim,batch_count))
 
-    ! Allocate device storage for A,B,C
-    allocate(d_A(batch_count))
-    allocate(d_B(batch_count))
-    allocate(d_C(batch_count))
-    bytes = int(dim*dim*sizeof_double, 8)
+    ! Create host pointer array to device matrix storage
+    allocate(h_d_A(batch_count))
+    allocate(h_d_B(batch_count))
+    allocate(h_d_C(batch_count))
+    bytes = dim*dim*sizeof_double
+
     do i=1,batch_count
-        stat = cudaMalloc(d_A(i), bytes)
-        stat = cudaMalloc(d_B(i), bytes)
-        stat = cudaMalloc(d_C(i), bytes)
+        stat = cudaMalloc(h_d_A(i), bytes)
+        stat = cudaMalloc(h_d_B(i), bytes)
+        stat = cudaMalloc(h_d_C(i), bytes)
     enddo
+
+    ! Copy the host array of device pointers to the device
+    bytes = batch_count*sizeof_double ! 8 byte pointers
+    stat = cudaMalloc(d_A, bytes)
+    stat = cudaMalloc(d_B, bytes)
+    stat = cudaMalloc(d_C, bytes)
+
+    stat = cudaMemcpy(d_A, C_LOC(h_d_A(1)), bytes, cudaMemcpyHostToDevice);
+    stat = cudaMemcpy(d_B, C_LOC(h_d_B(1)), bytes, cudaMemcpyHostToDevice);
+    stat = cudaMemcpy(d_C, C_LOC(h_d_C(1)), bytes, cudaMemcpyHostToDevice);
 
     ! Fill A,B diagonals with sin(i) data, C diagonal with cos(i)^2
     ! Matrices are arranged column major
@@ -59,39 +71,28 @@ program main
 
     ! Set input matrices on device
     do i=1,batch_count
-        stat = cublasSetMatrix(dim, dim, sizeof_double, C_LOC(A(1,1,i)), dim, d_A(i), dim)
-        stat = cublasSetMatrix(dim, dim, sizeof_double, C_LOC(B(1,1,i)), dim, d_B(i), dim)
-        stat = cublasSetMatrix(dim, dim, sizeof_double, C_LOC(C(1,1,i)), dim, d_C(i), dim)
-    enddo
-
-    ! Create a stream for every DGEMM operation
-    allocate(streams(batch_count))
-    do i=1,batch_count
-        stat = cudaStreamCreate(streams(i))
+        stat = cublasSetMatrix(dim, dim, sizeof_double, C_LOC(A(1,1,i)), dim, h_d_A(i), dim)
+        stat = cublasSetMatrix(dim, dim, sizeof_double, C_LOC(B(1,1,i)), dim, h_d_B(i), dim)
+        stat = cublasSetMatrix(dim, dim, sizeof_double, C_LOC(C(1,1,i)), dim, h_d_C(i), dim)
     enddo
 
     ! Set matrix coefficients
     alpha = 1.0
     beta = 1.0
 
-    ! Launch each DGEMM operation in own CUDA stream
-    do i=1,batch_count
-        ! Set CUDA stream
-        stat = cublasSetStream(handle, streams(i))
-
-        ! DGEMM: C = alpha*A*B + beta*C
-        stat = cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, &
-                           dim, dim, dim, &
-                           alpha,         &
-                           d_A(i), dim,   &
-                           d_B(i), dim,   &
-                           beta,          &
-                           d_C(i), dim)
-    enddo
+    ! batched DGEMM: C = alpha*A*B + beta*C
+    stat = cublasDgemmBatched(handle, CUBLAS_OP_N, CUBLAS_OP_N, &
+                       dim, dim, dim, &
+                       alpha,         &
+                       d_A, dim,      &
+                       d_B, dim,      &
+                       beta,          &
+                       d_C, dim,      &
+                       batch_count)
 
     ! Retrieve result matrix from device
     do i=1,batch_count
-        stat = cublasGetMatrix(dim, dim, sizeof_double, d_C(i), dim, C_LOC(C(1,1,i)), dim)
+        stat = cublasGetMatrix(dim, dim, sizeof_double, h_d_C(i), dim, C_LOC(C(1,1,i)), dim)
     enddo
 
     ! Simple sanity test, sum up all elements
@@ -106,10 +107,9 @@ program main
     print *, "Sum is:", sum, "should be: ", dim*(batch_count)*(batch_count+1)/2
 
     do i=1,batch_count
-        stat = cudaStreamDestroy(streams(i))
-        call cudaFree(d_A(i))
-        call cudaFree(d_B(i))
-        call cudaFree(d_C(i))
+        call cudaFree(h_d_A(i))
+        call cudaFree(h_d_B(i))
+        call cudaFree(h_d_C(i))
     enddo
 
     deallocate(A)

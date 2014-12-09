@@ -1,0 +1,18 @@
+all: checkEnv clean mpi_async_c
+
+.PHONY: checkEnv clean
+
+mpi_async_c: launcher_mystery.c
+	mkdir -p bin
+	nvcc -arch=sm_35 -c ./sleep_mystery.cu
+	cc sleep_mystery.o launcher_mystery.c -o bin/mpi_async_c.out
+
+checkEnv:
+ifndef CRAY_CUDATOOLKIT_VERSION
+	$(error cudatoolkit module not loaded)
+endif
+
+clean:
+	rm -rf bin
+	rm -f *.o
+	rm -f *.mod
