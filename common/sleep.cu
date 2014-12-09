@@ -40,8 +40,7 @@ extern "C" void create_streams(int num_streams)
     // Default stream
     streams[0] = NULL;
 
-    // Primer kernel which is needed
-    // for kernels to run concurrently correctly with the proxy
+    // Primer kernel launch
     sleep<<< 1, 1 >>>(1); 
 
     // Create streams
