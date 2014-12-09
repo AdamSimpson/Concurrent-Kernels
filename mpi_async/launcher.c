@@ -4,10 +4,10 @@
 #include "mpi.h"
 
 int64_t get_cycles(float seconds);
-void create_streams(int num_streams);
-void destroy_streams(int num_streams);
 void sleep_kernel(int64_t num_cycles, int stream_id);
+void create_streams(int num_streams);
 void wait_for_stream(int stream_id);
+void destroy_streams(int num_streams);
 
 int main(int argc, char *argv[])
 {

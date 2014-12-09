@@ -53,6 +53,11 @@ program main
             print *, 'Total time for ', num_kernels,' kernels: ', stop-start, 'seconds'
         endif
 
+        ! clean up array in wrapper, no stream actually destroyed
+        call destroy_streams(0);
+      
+        call MPI_Finalize();
+
     enddo
 
     call destroy_streams(0)
